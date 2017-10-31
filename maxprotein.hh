@@ -4,6 +4,9 @@
 // Compute the set of foods that maximizes protein, within a calorie budget,
 // with the greedy method or exhaustive search.
 //
+// Compile with g++ -std=c++11 maxprotein_test.cc -o maxprotein_test
+//
+// Run with ./maxprotein_test
 ///////////////////////////////////////////////////////////////////////////////
 
 
@@ -21,49 +24,49 @@
 
 // One food item in the USDA database.
 class Food {
-private:
-  // Human-readable description of the food, e.g. "all-purpose wheat
-  // flour". Must be non-empty.
-  std::string _description;
+    private:
+      // Human-readable description of the food, e.g. "all-purpose wheat
+      // flour". Must be non-empty.
+      std::string _description;
 
-  // Human-readable description of the amount of the food in one
-  // sample, e.g. "1 cup". Must be non-empty.
-  std::string _amount;
+      // Human-readable description of the amount of the food in one
+      // sample, e.g. "1 cup". Must be non-empty.
+      std::string _amount;
 
-  // Number of grams in one sample; must be non-negative.
-  int _amount_g;
+      // Number of grams in one sample; must be non-negative.
+      int _amount_g;
 
-  // Energy, in units of kilocalories (commonly called "calories"), in
-  // one sample; must be non-negative.
-  int _kcal;
+      // Energy, in units of kilocalories (commonly called "calories"), in
+      // one sample; must be non-negative.
+      int _kcal;
 
-  // Number of grams of protein in one sample; most be non-negative.
-  int _protein_g;
+      // Number of grams of protein in one sample; most be non-negative.
+      int _protein_g;
 
-public:
-  Food(const std::string& description,
-       const std::string& amount,
-       int amount_g,
-       int kcal,
-       int protein_g)
-    : _description(description),
-      _amount(amount),
-      _amount_g(amount_g),
-      _kcal(kcal),
-      _protein_g(protein_g) {
+    public:
+      Food(const std::string& description,
+           const std::string& amount,
+           int amount_g,
+           int kcal,
+           int protein_g)
+        : _description(description),
+          _amount(amount),
+          _amount_g(amount_g),
+          _kcal(kcal),
+          _protein_g(protein_g) {
 
-    assert(!description.empty());
-    assert(!amount.empty());
-    assert(amount_g >= 0);
-    assert(kcal >= 0);
-    assert(protein_g >= 0);
-  }
+        assert(!description.empty());
+        assert(!amount.empty());
+        assert(amount_g >= 0);
+        assert(kcal >= 0);
+        assert(protein_g >= 0);
+      }
 
-  const std::string& description() const { return _description; }
-  const std::string& amount() const { return _amount; }
-  int amount_g() const { return _amount_g; }
-  int kcal() const { return _kcal; }
-  int protein_g() const { return _protein_g; }
+    const std::string& description() const { return _description; }
+    const std::string& amount() const { return _amount; }
+    int amount_g() const { return _amount_g; }
+    int kcal() const { return _kcal; }
+    int protein_g() const { return _protein_g; }
 
 };
 
@@ -191,8 +194,15 @@ std::unique_ptr<FoodVector> filter_food_vector(const FoodVector& source,
 					       int min_kcal,
 					       int max_kcal,
 					       int total_size) {
-  // TODO: implement this function, then delete this comment
-  return nullptr;
+    std::unique_ptr<FoodVector> filteredFoods(new FoodVector);
+    int size = 0;	// variable to resize FoodVector
+
+    for ( auto & foods : source){
+        if(foods->kcal() > 0 && foods->kcal() >= min_kcal && foods->kcal() <= max_kcal && filteredFoods->size() < total_size) {
+            filteredFoods->push_back(foods);
+        }
+    }
+  return filteredFoods;
 }
 
 // Compute the optimal set of foods with a greedy
@@ -202,8 +212,62 @@ std::unique_ptr<FoodVector> filter_food_vector(const FoodVector& source,
 // we've run out of foods, or run out of calories.
 std::unique_ptr<FoodVector> greedy_max_protein(const FoodVector& foods,
 					       int total_kcal) {
-  // TODO: implement this function, then delete this comment
-  return nullptr;
+    std::unique_ptr<FoodVector> remFoods(new FoodVector);
+    std::unique_ptr<FoodVector> bestFoods(new FoodVector);
+    FoodVector& remainingFoodsPtr = *remFoods;
+    FoodVector& optimalFoodsPtr = *bestFoods;
+
+    for (auto & food : foods) {
+        remFoods->push_back(food);
+    }
+
+    int remKcal = total_kcal;
+    int i = -1;
+    int currMaxProtein = -1;
+    int currMaxLoc = -1;
+    bool remOptions = true;
+    while(remOptions) {
+        // Reset for every iteration
+        i = -1;
+        currMaxLoc = -1;
+        currMaxProtein = -1;
+
+        // Get index for max protein within remaining kcal
+        for (auto & food : remainingFoodsPtr) {
+            i++;
+            if(food->kcal() <= remKcal && food->protein_g() > currMaxProtein) {
+                currMaxProtein = food->protein_g();
+                currMaxLoc = i;
+            }
+        }
+        if(currMaxProtein == -1) {
+            remOptions = false;
+        } else {
+            // Add current best food to list
+            optimalFoodsPtr.push_back(remainingFoodsPtr.at(currMaxLoc));
+            remKcal -= remainingFoodsPtr.at(currMaxLoc)->kcal();
+
+            // Delete from list of options since it's already added
+            remainingFoodsPtr.erase(remainingFoodsPtr.begin()+currMaxLoc);
+        }
+    }
+    return bestFoods;
+}
+
+// Put the best foods into subset
+std::vector< std::vector<Food> > getFoodSubsets(std::vector<Food> fullSet) {
+    std::vector< std::vector<Food> > subset;
+    std::vector<Food> empty;
+    subset.push_back(empty);
+
+    for(int i = 0; i < fullSet.size(); i++) {
+        std::vector< std::vector<Food> > subsetTemp = subset;
+        for(int j = 0; j < subsetTemp.size(); j++)
+            subsetTemp[j].push_back(fullSet[i]);
+        for(int j = 0; j < subsetTemp.size(); j++)
+            subset.push_back(subsetTemp[j]);
+    }
+    return subset;
 }
 
 // Compute the optimal set of foods with an exhaustive search
@@ -213,8 +277,50 @@ std::unique_ptr<FoodVector> greedy_max_protein(const FoodVector& foods,
 // vector must be less than 64.
 std::unique_ptr<FoodVector> exhaustive_max_protein(const FoodVector& foods,
 						   int total_kcal) {
-  const int n = foods.size();
-  assert(n < 64);
-  // TODO: implement this function, then delete this comment
-  return nullptr;
+    const int n = foods.size();
+    assert(n < 64);	
+
+    std::unique_ptr<FoodVector> bestFoods(new FoodVector);
+    FoodVector& optimalFoodsPtr = *bestFoods;
+
+    std::vector<std::unique_ptr<FoodVector>> maybe;
+    std::unique_ptr<FoodVector> emptySet(new FoodVector);
+
+    maybe.push_back(std::move(emptySet));
+
+    std::vector< std::vector<Food> > foodSubsets;
+    std::vector<Food> fullSet;
+
+    int totalKcal = 0;
+    int maxProtein = 0;
+    int currKcal = 0;
+    int curProtein = 0;
+    int foodIndex = 0;
+    int index;
+    int j;
+    int i;
+
+    for(auto & food : foods) {
+        fullSet.push_back(*food);
+    }
+    foodSubsets = getFoodSubsets(fullSet);
+    for(index = 0; index < foodSubsets.size(); index++) {
+        std::vector<Food> f = foodSubsets[index];
+        currKcal = 0;
+        curProtein = 0;
+        for(j = 0; j < f.size(); j++) {
+            currKcal += f[j].kcal();
+            curProtein += f[j].protein_g();
+        }
+        if(currKcal <= total_kcal && curProtein > maxProtein) {
+            foodIndex = index;
+            maxProtein = curProtein;
+        }
+    }
+    std::vector<Food> bestSet = foodSubsets[foodIndex];
+    for (i = 0; i < bestSet.size(); i++) {
+        auto ptr = std::make_shared<Food>(bestSet[i]);
+        optimalFoodsPtr.push_back(ptr);
+    }
+    return bestFoods;
 }
